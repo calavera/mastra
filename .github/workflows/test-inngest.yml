@@ -1,0 +1,61 @@
+name: Inngest Tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'workflows/inngest/**'
+      - '.github/workflows/test-inngest.yml'
+
+jobs:
+  test:
+    # Only run on the main repository, not on forks
+    # if: ${{ github.repository == 'mastra-ai/mastra' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.1
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Start Inngest Dev Server
+        run: |
+          docker run -d --name inngest-ci-container -p 8288:8288 inngest/inngest inngest dev -u http://host.docker.internal:3000/api/inngest --poll-interval=1
+      - name: Wait for Inngest Dev Server
+        run: |
+          for i in {1..30}; do
+            if nc -z localhost 8288; then
+              echo "Inngest Dev Server is up!"
+              exit 0
+            fi
+            echo "Waiting for Inngest Dev Server..."
+            sleep 2
+          done
+          echo "Inngest Dev Server did not start in time" >&2
+          exit 1
+
+      - name: Run Inngest tests
+        run: pnpm test
+        working-directory: workflows/inngest
+        env:
+          INNGEST_DEV: '1'
+          INNGEST_BASE_URL: 'http://localhost:8288'
+          MASTRA_INNGEST_PORT: '8288'
+          MASTRA_HANDLER_PORT: '3000'
+          MASTRA_INNGEST_CONTAINER_NAME: 'inngest-ci-container'

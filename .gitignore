@@ -31,6 +31,7 @@ memory.db-*
 # Test directories
 voice/**/test-outputs/
 voice/**/test-data/
+output-dir
 
 serviceAccount.json
 tsup.config.bundled_*

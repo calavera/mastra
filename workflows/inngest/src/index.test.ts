@@ -27,20 +27,21 @@ interface LocalTestContext {
 
 describe('MastraInngestWorkflow', () => {
   beforeEach<LocalTestContext>(async ctx => {
-    const inngestPort = await getPort();
-    const handlerPort = await getPort();
-    const containerName = randomUUID();
-    await $`docker run --rm -d --name ${containerName} -p ${inngestPort}:${inngestPort} inngest/inngest:v1.5.10 inngest dev -p ${inngestPort} -u http://host.docker.internal:${handlerPort}/inngest/api`;
+    ctx.inngestPort = process.env.MASTRA_INNGEST_PORT ? parseInt(process.env.MASTRA_INNGEST_PORT) : await getPort();
+    ctx.handlerPort = process.env.MASTRA_HANDLER_PORT ? parseInt(process.env.MASTRA_HANDLER_PORT) : await getPort();
+    ctx.containerName = process.env.MASTRA_INNGEST_CONTAINER_NAME ?? randomUUID();
 
-    ctx.inngestPort = inngestPort;
-    ctx.handlerPort = handlerPort;
-    ctx.containerName = containerName;
+    if (!process.env.CI) {
+      await $`docker run --rm -d --name ${ctx.containerName} -p ${ctx.inngestPort}:${ctx.inngestPort} inngest/inngest:v1.5.10 inngest dev -p ${ctx.inngestPort} -u http://host.docker.internal:${ctx.handlerPort}/inngest/api`;
+    }
 
     vi.restoreAllMocks();
   });
 
   afterEach<LocalTestContext>(async ctx => {
-    await $`docker stop ${ctx.containerName}`;
+    if (!process.env.CI) {
+      await $`docker stop ${ctx.containerName}`;
+    }
   });
 
   describe.sequential('Basic Workflow Execution', () => {
@@ -74,8 +75,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({ value: z.string() }),
         outputSchema: z.object({
           result: z.string(),
@@ -90,7 +92,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -162,8 +164,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({
           result: z.string(),
@@ -177,7 +180,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -238,8 +241,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ value: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({ value: z.string() }),
         steps: [step1, step2],
@@ -252,7 +256,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -319,8 +323,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ value: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({ value: z.string() }),
         steps: [step1, step2],
@@ -333,7 +338,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -391,8 +396,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({
           result: z.string(),
@@ -407,7 +413,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -479,8 +485,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({
           result: z.string(),
@@ -499,7 +506,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -572,8 +579,9 @@ describe('MastraInngestWorkflow', () => {
         resumeSchema: z.any(),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({
           result: z.string(),
@@ -589,7 +597,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -666,8 +674,9 @@ describe('MastraInngestWorkflow', () => {
         resumeSchema: z.any(),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({
           result: z.string(),
@@ -683,7 +692,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -756,8 +765,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({ inputData: z.string() }),
         outputSchema: z.object({}),
       });
@@ -769,7 +779,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -843,8 +853,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({ inputValue: z.string() }),
         outputSchema: z.object({ value: z.string() }),
       });
@@ -856,7 +867,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -910,8 +921,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: triggerSchema,
         outputSchema: z.object({ result: z.string() }),
       });
@@ -923,7 +935,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -985,8 +997,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.object({ cool: z.string() }) }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: triggerSchema,
         outputSchema: z.object({ result: z.string() }),
       });
@@ -998,7 +1011,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -1058,8 +1071,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({ result: z.string() }),
       });
@@ -1080,7 +1094,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -1153,8 +1167,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({ status: z.string() }),
         outputSchema: z.object({ result: z.string() }),
         steps: [step1, step2, step3],
@@ -1183,7 +1198,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -1245,8 +1260,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
         steps: [step1, step2],
@@ -1259,7 +1275,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -1327,8 +1343,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
         steps: [step1, step2, step3],
@@ -1364,7 +1381,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -1422,8 +1439,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
       });
@@ -1447,7 +1465,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -1501,8 +1519,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
       });
@@ -1514,7 +1533,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -1585,8 +1604,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
       });
@@ -1598,7 +1618,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -1671,8 +1691,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
       });
@@ -1692,7 +1713,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'main-workflow': mainWorkflow,
+          [workflowId]: mainWorkflow,
         },
         server: {
           apiRoutes: [
@@ -1717,7 +1738,7 @@ describe('MastraInngestWorkflow', () => {
       const result = await run.start({ inputData: {} });
 
       expect(result.steps).toMatchObject({
-        'test-workflow': {
+        [workflowId]: {
           status: 'failed',
           error: 'Step execution failed',
         },
@@ -1773,8 +1794,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ result: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
       });
@@ -1820,7 +1842,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -1898,9 +1920,10 @@ describe('MastraInngestWorkflow', () => {
         execute: final,
       });
 
+      const counterWorkflowId = `counter-workflow-${randomUUID()}`;
       const counterWorkflow = createWorkflow({
         steps: [incrementStep, finalStep],
-        id: 'counter-workflow',
+        id: counterWorkflowId,
         inputSchema: z.object({
           target: z.number(),
           value: z.number(),
@@ -1922,7 +1945,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': counterWorkflow,
+          [counterWorkflowId]: counterWorkflow,
         },
         server: {
           apiRoutes: [
@@ -2001,9 +2024,10 @@ describe('MastraInngestWorkflow', () => {
         execute: final,
       });
 
+      const counterWorkflowId = `counter-workflow-${randomUUID()}`;
       const counterWorkflow = createWorkflow({
         steps: [incrementStep, finalStep],
-        id: 'counter-workflow',
+        id: counterWorkflowId,
         inputSchema: z.object({
           target: z.number(),
           value: z.number(),
@@ -2025,7 +2049,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': counterWorkflow,
+          [counterWorkflowId]: counterWorkflow,
         },
         server: {
           apiRoutes: [
@@ -2098,9 +2122,10 @@ describe('MastraInngestWorkflow', () => {
         },
       });
 
+      const counterWorkflowId = `counter-workflow-${randomUUID()}`;
       const counterWorkflow = createWorkflow({
         steps: [mapStep, finalStep],
-        id: 'counter-workflow',
+        id: counterWorkflowId,
         inputSchema: z.array(z.object({ value: z.number() })),
         outputSchema: z.object({
           finalValue: z.number(),
@@ -2114,7 +2139,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': counterWorkflow,
+          [counterWorkflowId]: counterWorkflow,
         },
         server: {
           apiRoutes: [
@@ -2219,8 +2244,9 @@ describe('MastraInngestWorkflow', () => {
         execute: final,
       });
 
+      const counterWorkflowId = `counter-workflow-${randomUUID()}`;
       const counterWorkflow = createWorkflow({
-        id: 'counter-workflow',
+        id: counterWorkflowId,
         inputSchema: z.object({
           startValue: z.number(),
         }),
@@ -2267,7 +2293,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': counterWorkflow,
+          [counterWorkflowId]: counterWorkflow,
         },
         server: {
           apiRoutes: [
@@ -2368,8 +2394,9 @@ describe('MastraInngestWorkflow', () => {
         execute: final,
       });
 
+      const counterWorkflowId = `counter-workflow-${randomUUID()}`;
       const counterWorkflow = createWorkflow({
-        id: 'counter-workflow',
+        id: counterWorkflowId,
         inputSchema: z.object({
           startValue: z.number(),
         }),
@@ -2416,7 +2443,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': counterWorkflow,
+          [counterWorkflowId]: counterWorkflow,
         },
         server: {
           apiRoutes: [
@@ -2482,8 +2509,9 @@ describe('MastraInngestWorkflow', () => {
         }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: triggerSchema,
         outputSchema: z.object({}),
         steps: [step1],
@@ -2553,8 +2581,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
         steps: [step1, step2, step3, step4, step5],
@@ -2588,7 +2617,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -2641,8 +2670,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
       });
@@ -2654,7 +2684,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -2708,8 +2738,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
         retryConfig: { attempts: 5, delay: 200 },
@@ -2717,7 +2748,7 @@ describe('MastraInngestWorkflow', () => {
 
       new Mastra({
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -2773,8 +2804,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ name: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({ name: z.string() }),
       });
@@ -2786,7 +2818,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -2845,8 +2877,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
         steps: [step1, step2],
@@ -2858,7 +2891,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -3031,8 +3064,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
         steps: [step1, step2],
@@ -3044,7 +3078,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          [workflowId]: workflow,
         },
         server: {
           apiRoutes: [
@@ -3116,8 +3150,9 @@ describe('MastraInngestWorkflow', () => {
 
       const { createWorkflow } = init(inngest);
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
         steps: [],
@@ -3194,8 +3229,9 @@ describe('MastraInngestWorkflow', () => {
         }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const promptEvalWorkflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({ input: z.string() }),
         outputSchema: z.object({}),
         steps: [getUserInput, promptAgent, evaluateTone, improveResponse, evaluateImproved],
@@ -3216,7 +3252,7 @@ describe('MastraInngestWorkflow', () => {
       const mastra = new Mastra({
         storage: initialStorage,
         workflows: {
-          'test-workflow': promptEvalWorkflow,
+          workflowId: promptEvalWorkflow,
         },
         server: {
           apiRoutes: [
@@ -3344,8 +3380,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ improvedOutput: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({ input: z.string() }),
         outputSchema: z.object({}),
         steps: [getUserInput, promptAgent, evaluateTone, humanIntervention, explainResponse],
@@ -3366,7 +3403,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -3529,8 +3566,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({ improvedOutput: z.string() }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({ input: z.string() }),
         outputSchema: z.object({}),
         steps: [
@@ -3568,7 +3606,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -3743,8 +3781,9 @@ describe('MastraInngestWorkflow', () => {
         }),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const promptEvalWorkflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({ input: z.string() }),
         outputSchema: z.object({}),
       });
@@ -3762,7 +3801,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': promptEvalWorkflow,
+          workflowId: promptEvalWorkflow,
         },
         server: {
           apiRoutes: [
@@ -3882,7 +3921,8 @@ describe('MastraInngestWorkflow', () => {
         },
       });
 
-      const workflow = createWorkflow({ id: 'test-workflow', inputSchema: z.object({}), outputSchema: z.object({}) });
+      const workflowId = `test-workflow-${randomUUID()}`;
+      const workflow = createWorkflow({ id: workflowId, inputSchema: z.object({}), outputSchema: z.object({}) });
       workflow.then(step1).commit();
 
       const mastra = new Mastra({
@@ -3890,7 +3930,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -3932,8 +3972,9 @@ describe('MastraInngestWorkflow', () => {
 
       const { createWorkflow, createStep } = init(inngest);
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({
           prompt1: z.string(),
           prompt2: z.string(),
@@ -3994,7 +4035,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -4055,8 +4096,9 @@ describe('MastraInngestWorkflow', () => {
         execute,
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({
           prompt1: z.string(),
           prompt2: z.string(),
@@ -4131,7 +4173,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -4274,7 +4316,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': counterWorkflow,
+          workflowId: counterWorkflow,
         },
         server: {
           apiRoutes: [
@@ -4426,7 +4468,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': counterWorkflow,
+          workflowId: counterWorkflow,
         },
         server: {
           apiRoutes: [
@@ -4583,7 +4625,7 @@ describe('MastraInngestWorkflow', () => {
             url: ':memory:',
           }),
           workflows: {
-            'test-workflow': counterWorkflow,
+            workflowId: counterWorkflow,
           },
           server: {
             apiRoutes: [
@@ -4742,7 +4784,7 @@ describe('MastraInngestWorkflow', () => {
             url: ':memory:',
           }),
           workflows: {
-            'test-workflow': counterWorkflow,
+            workflowId: counterWorkflow,
           },
           server: {
             apiRoutes: [
@@ -4939,7 +4981,7 @@ describe('MastraInngestWorkflow', () => {
             url: ':memory:',
           }),
           workflows: {
-            'test-workflow': counterWorkflow,
+            workflowId: counterWorkflow,
           },
           server: {
             apiRoutes: [
@@ -5095,7 +5137,7 @@ describe('MastraInngestWorkflow', () => {
             url: ':memory:',
           }),
           workflows: {
-            'test-workflow': counterWorkflow,
+            workflowId: counterWorkflow,
           },
           server: {
             apiRoutes: [
@@ -5243,7 +5285,7 @@ describe('MastraInngestWorkflow', () => {
             url: ':memory:',
           }),
           workflows: {
-            'test-workflow': counterWorkflow,
+            workflowId: counterWorkflow,
           },
           server: {
             apiRoutes: [
@@ -5427,7 +5469,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': counterWorkflow,
+          workflowId: counterWorkflow,
         },
         server: {
           apiRoutes: [
@@ -5589,7 +5631,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': counterWorkflow,
+          workflowId: counterWorkflow,
         },
         server: {
           apiRoutes: [
@@ -5656,7 +5698,8 @@ describe('MastraInngestWorkflow', () => {
         },
       });
 
-      const workflow = createWorkflow({ id: 'test-workflow', inputSchema: z.object({}), outputSchema: z.object({}) });
+      const workflowId = `test-workflow-${randomUUID()}`;
+      const workflow = createWorkflow({ id: workflowId, inputSchema: z.object({}), outputSchema: z.object({}) });
       workflow.then(step1).commit();
 
       const mastra = new Mastra({
@@ -5664,7 +5707,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -5719,7 +5762,8 @@ describe('MastraInngestWorkflow', () => {
         inputSchema: z.object({}),
         outputSchema: z.object({}),
       });
-      const workflow = createWorkflow({ id: 'test-workflow', inputSchema: z.object({}), outputSchema: z.object({}) });
+      const workflowId = `test-workflow-${randomUUID()}`;
+      const workflow = createWorkflow({ id: workflowId, inputSchema: z.object({}), outputSchema: z.object({}) });
       workflow.then(step).commit();
 
       const mastra = new Mastra({
@@ -5727,7 +5771,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -5792,8 +5836,9 @@ describe('MastraInngestWorkflow', () => {
         inputSchema: z.object({ human: z.boolean() }),
         outputSchema: z.object({}),
       });
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         mastra,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
@@ -5838,8 +5883,9 @@ describe('MastraInngestWorkflow', () => {
         inputSchema: z.object({}),
         outputSchema: z.object({}),
       });
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({
           hasEngine: z.boolean(),
@@ -5852,7 +5898,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -5908,8 +5954,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
         steps: [step1, step2],
@@ -5921,7 +5968,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -6078,9 +6125,9 @@ describe('MastraInngestWorkflow', () => {
         inputSchema: z.object({ value: z.string() }),
         outputSchema: z.object({}),
       });
-
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
         steps: [step1, step2],
@@ -6092,7 +6139,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -6244,8 +6291,9 @@ describe('MastraInngestWorkflow', () => {
         outputSchema: z.object({}),
       });
 
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({}),
         outputSchema: z.object({}),
         steps: [step1, step2],
@@ -6257,7 +6305,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
@@ -6461,9 +6509,9 @@ describe('MastraInngestWorkflow', () => {
           completenessScore: z.any(),
         }),
       });
-
+      const workflowId = `test-workflow-${randomUUID()}`;
       const promptEvalWorkflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({ input: z.string() }),
         outputSchema: z.object({}),
         steps: [getUserInput, promptAgent, evaluateTone, improveResponse, evaluateImproved],
@@ -6482,7 +6530,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': promptEvalWorkflow,
+          workflowId: promptEvalWorkflow,
         },
         server: {
           apiRoutes: [
@@ -6578,9 +6626,9 @@ describe('MastraInngestWorkflow', () => {
       });
 
       const { createWorkflow, createStep } = init(inngest);
-
+      const workflowId = `test-workflow-${randomUUID()}`;
       const workflow = createWorkflow({
-        id: 'test-workflow',
+        id: workflowId,
         inputSchema: z.object({
           prompt1: z.string(),
           prompt2: z.string(),
@@ -6671,7 +6719,7 @@ describe('MastraInngestWorkflow', () => {
           url: ':memory:',
         }),
         workflows: {
-          'test-workflow': workflow,
+          workflowId: workflow,
         },
         server: {
           apiRoutes: [
